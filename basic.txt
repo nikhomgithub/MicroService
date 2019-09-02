@@ -1,0 +1,81 @@
+Microservice is to separate Bib-Bib project into small app 
+
+Each service = small app (module,package,src)
+
+- DockerFile is a configto create Docker image
+
+
+Component for Microservice
+Docker container = good for almost all project sizes
+Microservice = good for big companies with a lot of code and people
+Sweetspot = Monolith app and database in containers
+
+1. Network in Docker container
+   With networks it is possible to specific which containers can talk to each other
+   If no network is specified, all containers are in the same network,
+   containers in the same one can reference each other by name of service  "http://videos"
+
+1. In container, it is do not guarantee to get localhost (127.0.0.1)
+   /src/config/index.js
+    let DB_URI="mongodb://localhost:27017/microservices"       //mean to to this database in mongodb
+
+2. Every service should have following  for debugging purpose 
+    app.get("/",(req,res)=>{
+        res.json({msg:"book"})
+    })
+
+3. Every service has the same port = 3000
+
+4. Make npm_module for common code such as model of mongo db 
+   (how to create node_module)
+
+5. app.get("/api/v1/search",async (req,res)=>{})
+   better to crete api version just in case 
+
+6. Try not to run synchronous so much , it is slow, and just use Promise.all
+
+7. res.json (videos.concat(books))  => good concat 
+
+8. Do not chain microservice.   microservice => database   better to direct connect to database (one hop rule)
+
+9. fetch("http://videos:3000") //video declare as service name in docker-compose.yml
+
+10. Better to user messageQ (kafka, RabbitMQ, ActiveMQ) between services  
+
+11. We not allow client to directly connect or to see backend ipaddress, it must be connect via nginx
+
+12. nginx is a gate way, for filter, firewall , load balance, cache , 
+
+13. client can only go to hostname and /something 
+
+14. Make sure when make axios or fetch , make it via nginx, not directly to application
+    host_name = nanogram.io      , axios.get("http:nanogram.io/api/v1/video")    => not to "http://videos:3000
+
+15. Meaning of
+    location /{
+        try_files $uri $uri/ @web        //if client send http://nanogram.io / ==> $uri = /  
+    }                                    //it will look for "index.html" in root 
+                                         //if client send http://nanogram.io/foo.html / ==> uri=foo.html
+                                         //it will look in to root, but it can not be found 
+                                         //at last it will look in location @web{} 
+    location @web{
+        proxy_pass http://web:3000      
+    }                                       
+
+16. MONGO_DB_URI=mongodb://db/microservices
+    db = name of service of mongo
+    microservices = name of database in mongo
+
+How to change docker CLI to dockercompose
+#docker run -p 80:4000 -v $(pwd):/site bradtraversy/jekyll-serve
+
+services:
+    jekyll:
+        image: bradtraversy/jekell-serve
+        volume:
+            - .:/site
+        port:
+            - '80:4000'
+
+How to change host name in docker
+#docker run -it -h test.local ubunty bash  //mean hostname to be http://test
