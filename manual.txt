@@ -1,0 +1,198 @@
+https://www.youtube.com/watch?v=aWxR05rUoto
+===============================
+for each node application
+--------------------------------
+
+let DB_URI = "mongodb://localhost:27017/microservices";    //for development
+
+if(process.env.MONGO_DB_URI){                              //for production
+  DB_URI = process.env.MONGO_DB_URI;
+}
+
+module.exprts={DB_URI}
+---------------------------------
+Schema
+const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
+
+const BookSchema = new Schema({
+  name:String,
+  type:{type:String,default:"book"}
+  createAt:{type:Date,default:Date.now}                 //better to put default
+})
+
+module.exports = mongoose.model("Book",BookSchema);
+---------------------------------
+app.js
+
+app.get("/servicename",=>{                             //have a route to check application name 
+  res.json({msg:"books"})
+});
+
+app.get("/api/v1/books"),async(req,res)=>{             //have version number for multiple-version api service
+  const books = await Bookfind({}); 
+                //await book.save();                   //make synchronous when deal wtih mogoose
+  res.json(books);
+});
+-------------------------------
+.dockerignore  and .gitignore
+node_modules
+
+-------------------------------
+Dockerfile
+
+FROM node:latest                                      //can have multiple source
+COPY . /src                                           //copy from pwd to node-docker destination
+WORKDIR /src                                          //node-docker destination
+RUN npm install --production
+EXPOSE 3000
+CMD npm start 
+
+----------------------------                         
+Create node_module as library to share
+avoid repeated code & mistake when edit              //
+
+----------------------------
+use array of promise (array of async)               //direct link to mongodb (private network)
+
+app.get("/api/v1/search",async (req,res)=>{
+  const videosPromise = Video.find({});             //run async
+  const booksPromise = Book.find({});               //run async  
+  const promises = [videosPromise,booksPromise];    
+  const [videos,books] = await Promise.all(promises);  //run sync
+  
+  res.json(videos.concat(books));
+})
+
+---------------------------
+const fetch = require("node-fetch")
+
+app.get("/api/v1/search/depends-on", async(req,res)=>{
+  try{                                                                     
+    const videoPromise = fetch("http://videos:3000/");                    //node directly talk to node is dangerous
+    const bookPromise = fetch("http://books:300/");                       //node app -> message mq -> node app -> db
+    promises = [videoPromise,bookPromise];                                //do not make above chain too long
+    const [videoResponse,bookResponse] = await Promise.all(promises);
+    const videoJson = await videoResponse.json();
+    const bookJson = await bookResponse.json();
+    
+    res.json({video:videoJson, book:bookJson});
+  } 
+  catch(e){
+    res.status(500).json(e);  
+  }
+})
+
+
+============================================
+============================================
+============================================
+https://www.youtube.com/watch?v=QjhJs31h_4k
+============================================
+alway use nginx as a single gateway for our api                //nginx has load balance & reverse proxy
+                                                               //which multiple node app run inside private network
+https://github.com/nikhomgithub/nginx-websocket/blob/master/manul.txt
+
+server {
+  listen 80;
+  root /srv/www/static                                        //nginx will look at static folder
+  
+  location /{                                                 //in case can not find in static folder
+    try_files $uri $uri/ @web;
+  }
+  
+  location @web{                                              //we have node app to render a page instead of static folder
+    proxy_pass http://web:3000;                               //http://web:3000   nginx will go to this page is backup page
+                                                           
+  }
+}
+------------------------------------------------------
+docker-compose.yml
+
+version: '3'                                                  //docker-compose version
+services:
+  web:
+    build: './web'
+    ports:
+      - "3000:3000"
+      
+  search:                                    //docker will assign   search=internal ip address 
+    build: './search'                         //build from Dockerfile in ./search
+    ports:
+      - "3001:3000"
+    depends_on:
+      - db
+    environmnet:
+      - MONGO_DB_URI=mongodb://db/microservices
+    
+  books:                                      //docker will assign   books=internal ip address 
+    build: './books'                           //build from Dockerfile in ./books
+    ports:
+      - "3002:3000"
+    depends_on:
+      - db
+    environment:
+      - MONGO_DB_URI=mongodb://db/microservices
+  
+  videos:                                     //docker will assign   videos=internal ip address 
+    build:'./videos'                          //build from Dockerfile in ./videos
+    ports:
+      - "3003:3000"
+    depends_on:
+      - db
+    environment:
+      - MONGO_DB_URI=mongodb://db/microservices  
+      
+  db:                                          //docker will assign   db=internal ip address 
+    image: mongo
+    ports:
+      - "27017:27017"
+      
+  nginx:
+    image:nginx:latest
+    ports:
+      - "80:80"
+    volumes:
+      - ./web/public:/srv/www/static                    //replace => file in pwd : file in container
+      - ./default.conf:/etc/nginx/conf./default.conf    //replace => file in pwd : file in container
+    depends_on:
+      - web
+      - b00ks
+      - search
+      - videos
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
