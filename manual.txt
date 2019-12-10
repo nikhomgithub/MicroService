@@ -2,7 +2,6 @@ https://www.youtube.com/watch?v=aWxR05rUoto
 ===============================
 for each node application
 --------------------------------
-
 let DB_URI = "mongodb://localhost:27017/microservices";    //for development
 
 if(process.env.MONGO_DB_URI){                              //for production
@@ -63,7 +62,6 @@ app.get("/api/v1/search",async (req,res)=>{
   
   res.json(videos.concat(books));
 })
-
 ---------------------------
 const fetch = require("node-fetch")
 
@@ -82,9 +80,6 @@ app.get("/api/v1/search/depends-on", async(req,res)=>{
     res.status(500).json(e);  
   }
 })
-
-
-============================================
 ============================================
 ============================================
 https://www.youtube.com/watch?v=QjhJs31h_4k
@@ -160,4 +155,3 @@ services:
       - b00ks
       - search
       - videos
-      
